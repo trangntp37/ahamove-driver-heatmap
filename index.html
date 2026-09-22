@@ -694,6 +694,8 @@ button,select{font:inherit;color:inherit}
 #gate h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em}
 #gate p{color:var(--ink-3);font-size:14.5px;margin:6px 0 26px;text-align:center}
 #gate .glist{display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:10px;width:100%;max-width:480px}
+#gate input[type=search]{width:100%;max-width:480px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);font-size:15px;margin-bottom:14px}
+#gate input[type=search]:focus{outline:2px solid var(--aha);outline-offset:1px;border-color:var(--aha)}
 #gate button{padding:16px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2);text-align:left;cursor:pointer;font-size:15px;font-weight:600;color:var(--ink)}
 #gate button:hover,#gate button:focus-visible{border-color:var(--aha);background:var(--aha-tint);outline:none}
 #gate button .n{display:block;font-weight:400;font-size:12px;color:var(--ink-3);margin-top:2px}
@@ -775,7 +777,8 @@ section.block h2 span{font-weight:400;color:var(--ink-3)}
 
 <div id="gate">
   <div class="g-brand"><span class="dot"></span><h1>Bản đồ đơn khu vực</h1></div>
-  <p>Chọn tỉnh / thành phố bạn đang chạy xe</p>
+  <p>Chọn tỉnh / thành phố bạn đang hoạt động</p>
+  <input type="search" id="gsearch" placeholder="Tìm tỉnh, thành phố…" autocomplete="off">
   <div class="glist" id="glist"></div>
 </div>
 
@@ -862,8 +865,8 @@ const $=s=>document.querySelector(s);
 // vì dữ liệu định vị nội bộ hiện vẫn dùng tên này). Sửa lại tại đây nếu công ty đổi cách hiển thị.
 const PROVINCE_NAME = {
   BDG:'Tỉnh Bình Dương', DNI:'Tỉnh Đồng Nai', DAD:'Thành phố Đà Nẵng', HPH:'Thành phố Hải Phòng',
-  CXR:'Tỉnh Khánh Hòa', VCA:'Thành phố Cần Thơ', DLI:'Tỉnh Lâm Đồng', VII:'Tỉnh Nghệ An',
-  BMV:'Tỉnh Đắk Lắk', VCS:'Tỉnh Bà Rịa - Vũng Tàu', HUI:'Thành phố Huế', BNH:'Tỉnh Bắc Ninh',
+  CXR:'Tỉnh Khánh Hòa', VCA:'Thành phố Cần Thơ', DLI:'Thành phố Đà Lạt', VII:'Tỉnh Nghệ An',
+  BMV:'Buôn Mê Thuột', VCS:'Tỉnh Bà Rịa - Vũng Tàu', HUI:'Thành phố Huế', BNH:'Tỉnh Bắc Ninh',
   LAN:'Tỉnh Long An', PXU:'Tỉnh Gia Lai', THD:'Tỉnh Thanh Hóa', PHH:'Tỉnh Bình Thuận',
   VDO:'Tỉnh Quảng Ninh', TGG:'Tỉnh Tiền Giang'
 };
@@ -887,10 +890,19 @@ for(const c of CELLS){ const s=STORES[c[0]]; volByProv.set(s[IC], (volByProv.get
 const provList=[...new Set(STORES.map(s=>s[IC]))].sort((a,b)=>(volByProv.get(b)||0)-(volByProv.get(a)||0));
 if(provList.length===0){
   $('#glist').innerHTML = '<p style="grid-column:1/-1;color:var(--ink-3);font-size:13.5px;line-height:1.6">Không tải được dữ liệu.<br>Trang này cần mở qua đường link web (bắt đầu bằng https://), không mở trực tiếp bằng cách bấm vào file trên máy hoặc xem trong ứng dụng chat.</p>';
+  $('#gsearch').style.display='none';
 } else {
   $('#glist').innerHTML = provList.map(c=>`<button data-c="${c}">${PROVINCE_NAME[c]||c}</button>`).join('');
   $('#glist').querySelectorAll('button').forEach(b=>b.onclick=()=>choose(b.dataset.c));
 }
+const normVN=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
+$('#gsearch').oninput=e=>{
+  const q=normVN(e.target.value.trim());
+  $('#glist').querySelectorAll('button').forEach(b=>{
+    const hit=!q || normVN(b.textContent).includes(q) || normVN(b.dataset.c).includes(q);
+    b.style.display = hit ? '' : 'none';
+  });
+};
 
 let PROV='';
 let map, heat, storeLayer, showHeat=true, showStore=true;
