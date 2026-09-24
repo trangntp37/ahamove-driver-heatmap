@@ -693,6 +693,9 @@ button,select{font:inherit;color:inherit}
 #gate .g-brand .dot{width:14px;height:14px;border-radius:50%;background:var(--aha);box-shadow:0 0 0 5px var(--aha-tint)}
 #gate h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em}
 #gate p{color:var(--ink-3);font-size:14.5px;margin:6px 0 26px;text-align:center}
+#gate .gload{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--ink-3);font-size:14px;padding:24px 0}
+#gate .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--aha);animation:gspin .8s linear infinite}
+@keyframes gspin{to{transform:rotate(360deg)}}
 #gate .glist{display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:10px;width:100%;max-width:480px}
 #gate input[type=search]{width:100%;max-width:480px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);font-size:15px;margin-bottom:14px}
 #gate input[type=search]:focus{outline:2px solid var(--aha);outline-offset:1px;border-color:var(--aha)}
@@ -783,7 +786,7 @@ section.block h2 span{font-weight:400;color:var(--ink-3)}
   <div class="g-brand"><span class="dot"></span><h1>Bản đồ đơn khu vực</h1></div>
   <p>Chọn tỉnh / thành phố bạn đang hoạt động</p>
   <input type="search" id="gsearch" placeholder="Tìm tỉnh, thành phố…" autocomplete="off">
-  <div class="glist" id="glist"></div>
+  <div class="glist" id="glist"><div class="gload"><span class="spin"></span>Đang tải dữ liệu, chờ vài giây…</div></div>
 </div>
 
 <div class="app" id="app" style="display:none">
@@ -868,15 +871,15 @@ const $=s=>document.querySelector(s);
 // Tên tỉnh hiển thị đúng theo cách địa chỉ trong hệ thống đang ghi (tên trước sáp nhập 2025,
 // vì dữ liệu định vị nội bộ hiện vẫn dùng tên này). Sửa lại tại đây nếu công ty đổi cách hiển thị.
 const PROVINCE_NAME = {
-  BDG:'Tỉnh Bình Dương', DNI:'Tỉnh Đồng Nai', DAD:'Thành phố Đà Nẵng', HPH:'Thành phố Hải Phòng',
-  CXR:'Tỉnh Khánh Hòa', VCA:'Thành phố Cần Thơ', DLI:'Thành phố Đà Lạt', VII:'Tỉnh Nghệ An',
-  BMV:'Buôn Mê Thuột', VCS:'Tỉnh Bà Rịa - Vũng Tàu', HUI:'Thành phố Huế', BNH:'Tỉnh Bắc Ninh',
-  LAN:'Tỉnh Long An', PXU:'Tỉnh Gia Lai', THD:'Tỉnh Thanh Hóa', PHH:'Tỉnh Bình Thuận',
-  VDO:'Tỉnh Quảng Ninh', TGG:'Tỉnh Tiền Giang'
+  BDG:'Bình Dương', DNI:'Đồng Nai', DAD:'Thành phố Đà Nẵng', HPH:'Thành phố Hải Phòng',
+  CXR:'Khánh Hòa', VCA:'Thành phố Cần Thơ', DLI:'Thành phố Đà Lạt', VII:'Thành phố Vinh',
+  BMV:'Buôn Mê Thuột', VCS:'Bà Rịa - Vũng Tàu', HUI:'Thành phố Huế', BNH:'Bắc Ninh',
+  LAN:'Long An', PXU:'Gia Lai', THD:'Thanh Hóa', PHH:'Bình Thuận',
+  VDO:'Quảng Ninh', TGG:'Tiền Giang'
 };
 
 let payload = RAW;
-if(DATA_URL){ try{ const r=await fetch(DATA_URL,{cache:'no-store'}); payload=await r.json(); }catch(e){ console.warn('Không tải được DATA_URL, dùng dữ liệu nhúng',e); } }
+if(DATA_URL){ try{ const r=await fetch(DATA_URL,{cache:'no-cache'}); if(!r.ok) throw new Error('HTTP '+r.status); payload=await r.json(); }catch(e){ console.warn('Không tải được DATA_URL, dùng dữ liệu nhúng',e); } }
 const STORES = payload.stores; // [c,rg,w,st,b,sl,lat,lng]
 const CELLS  = payload.cells;  // [sid,h,d,n,ac]
 const SF = payload.F;
@@ -894,7 +897,7 @@ const volByProv = new Map();
 for(const c of CELLS){ const s=STORES[c[0]]; volByProv.set(s[IC], (volByProv.get(s[IC])||0)+c[3]); }
 const provList=[...new Set(STORES.map(s=>s[IC]))].sort((a,b)=>(volByProv.get(b)||0)-(volByProv.get(a)||0));
 if(provList.length===0){
-  $('#glist').innerHTML = '<p style="grid-column:1/-1;color:var(--ink-3);font-size:13.5px;line-height:1.6">Không tải được dữ liệu.<br>Trang này cần mở qua đường link web (bắt đầu bằng https://), không mở trực tiếp bằng cách bấm vào file trên máy hoặc xem trong ứng dụng chat.</p>';
+  $('#glist').innerHTML = '<p style="grid-column:1/-1;color:var(--ink-3);font-size:13.5px;line-height:1.6">Không tải được dữ liệu. Kiểm tra kết nối mạng rồi thử lại.<br>Trang này cần mở qua đường link web (bắt đầu bằng https://), không mở trực tiếp bằng cách bấm vào file trên máy hoặc xem trong ứng dụng chat.</p><button onclick="location.reload()" style="grid-column:1/-1;justify-self:center;text-align:center">Thử lại</button>';
   $('#gsearch').style.display='none';
 } else {
   $('#glist').innerHTML = provList.map(c=>`<button data-c="${c}">${PROVINCE_NAME[c]||c}</button>`).join('');
